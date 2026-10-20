@@ -58,9 +58,9 @@ PATHS.forEach(o => {
   });
   p.addEventListener('mouseleave', () => tip.style.display = 'none');
   g.appendChild(p);
-  labels.push({p, name, reach: d[0]});
+  labels.push({p, name, reach: d[0], imp: d[1]});
 });
-labels.forEach(({p, name, reach}) => {   // circles + names on top of all provinces
+labels.forEach(({p, name, reach, imp}) => {   // circles + names on top of all provinces
   const b = p.getBBox(), cx = b.x + b.width / 2, cy = b.y + b.height / 2;
   if (reach > 0) {
     const c = document.createElementNS(NS, 'circle');
@@ -68,7 +68,7 @@ labels.forEach(({p, name, reach}) => {   // circles + names on top of all provin
     c.setAttribute('r', 4 + Math.sqrt(reach / maxReach) * 34); c.setAttribute('class', 'dot');
     g.appendChild(c);
   }
-  if (reach > 0) {
+  if (reach > 0 && imp > 0) {   // red pin only when Reach and Impressions are both above 0
     const pin = document.createElementNS(NS, 'g');
     pin.setAttribute('transform', `translate(${cx - 6},${cy - 17})`); pin.setAttribute('pointer-events', 'none');
     pin.innerHTML = '<path d="M6 0C2.7 0 0 2.6 0 5.8 0 10 6 16 6 16s6-6 6-10.2C12 2.6 9.3 0 6 0z" fill="#D93025" stroke="#fff" stroke-width="1"/><circle cx="6" cy="5.8" r="2.2" fill="#fff"/>';
