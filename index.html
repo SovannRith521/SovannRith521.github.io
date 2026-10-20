@@ -1,0 +1,99 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Reach by Province</title>
+<style>
+:root{--ink:#1B2A5E;--muted:#6E7382;--bg:#ffffff;--line:#ffffff}
+html,body{margin:0;background:var(--bg);font-family:Arial,Helvetica,sans-serif;color:#202124;height:100%}
+#wrap{position:relative;width:100%;height:100%;overflow:hidden}
+h1{font-size:18px;color:var(--ink);text-align:center;margin:12px 0 2px;font-weight:normal}
+.sub{font-size:11px;color:var(--muted);text-align:center;margin-bottom:4px}
+svg{width:100%;height:calc(100% - 52px);display:block;cursor:grab}
+path.prov{stroke:var(--line);stroke-width:1.2;opacity:.9;transition:opacity .15s}
+path.prov:hover{opacity:1;stroke:#1B2A5E;stroke-width:2}
+circle.dot{fill:#1B2A5E;fill-opacity:.35;stroke:#fff;stroke-width:1.5;pointer-events:none}
+text.lbl{font-size:10px;fill:#1B2A5E;text-anchor:middle;pointer-events:none;paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round}
+#tip{position:absolute;pointer-events:none;background:#fff;border:1px solid #C9CFDC;border-radius:6px;padding:8px 10px;font-size:12px;line-height:1.6;box-shadow:0 2px 6px rgba(0,0,0,.12);display:none;white-space:nowrap}
+#tip b{color:var(--ink)}
+.zoom{position:absolute;right:10px;bottom:28px;display:flex;flex-direction:column;gap:4px}
+.zoom button{width:30px;height:30px;border:1px solid #DCE0E8;background:#fff;border-radius:4px;font-size:18px;color:#444;cursor:pointer}
+.legend{position:absolute;left:10px;bottom:22px;background:rgba(255,255,255,.92);border:1px solid #DCE0E8;border-radius:6px;padding:4px 8px;font-size:11px;line-height:1.8;color:#3C4150}
+.legend i{display:inline-block;vertical-align:middle;margin-right:6px}
+.credit{position:absolute;left:8px;bottom:4px;font-size:8px;color:#b5bac1}
+</style></head><body>
+<div id="wrap">
+<h1>Reach by Province</h1>
+<div class="sub"><span id="period">Loading…</span> · Circle size = Reach · Hover a province for details</div>
+<svg id="map" viewBox="0 0 655 601"><g id="g"></g></svg>
+<div class="zoom"><button id="zin">+</button><button id="zout">−</button><button id="zre" title="Reset" style="font-size:13px">⟲</button></div>
+<div class="credit">© svg-maps, CC BY 4.0</div>
+<div id="tip"></div>
+</div>
+<script>
+const CODES = {"Banteay Meanchey":"KH-1","Battambang":"KH-2","Kampong Cham":"KH-3","Kampong Chhnang":"KH-4","Kampong Speu":"KH-5","Kampong Thom":"KH-6","Kampot":"KH-7","Kandal":"KH-8","Koh Kong":"KH-9","Kratie":"KH-10","Mondulkiri":"KH-11","Phnom Penh":"KH-12","Preah Vihear":"KH-13","Prey Veng":"KH-14","Pursat":"KH-15","Rattanakkiri":"KH-16","Siem Reap":"KH-17","Preah Sihanouk":"KH-18","Stung Treng":"KH-19","Svay Rieng":"KH-20","Ta Keo":"KH-21","Oddar Meanchey":"KH-22","Kep":"KH-23","Pailin":"KH-24","Tboung Khmum":"KH-25"};
+let PATHS = [];
+function main(DATA) {
+const COLOURS = {'Phnom Penh':'#6A5FB5','Siem Reap':'#D9B77E','Preah Sihanouk':'#8CCBEA','Battambang':'#22737A','Banteay Meanchey':'#D9A1E6',
+ 'Kandal':'#B5553F','Ta Keo':'#3A5DA0','Kampong Speu':'#C9922E','Kampong Cham':'#7A3F86','Svay Rieng':'#66713A',
+ 'Kampong Thom':'#7FA88B','Rattanakkiri':'#C46A6A','Kampong Chhnang':'#9B7BB8','Preah Vihear':'#5E8FA8','Pailin':'#E08A5C',
+ 'Koh Kong':'#6FAF7A','Mondulkiri':'#A8737F','Kep':'#4F7CB8','Kratie':'#B98ACB','Stung Treng':'#8A9A5B','Prey Veng':'#5FA3A3',
+ 'Pursat':'#C08457','Oddar Meanchey':'#7D8CC4','Kampot':'#9E6B9E','Tboung Khmum':'#6E9E6E'};
+const SHORT = {'Preah Sihanouk':'Sihanoukville','Ta Keo':'Takeo','Rattanakkiri':'Ratanakiri','Tboung Khmum':'Tbong Khmum'};
+const fmt = v => Math.round(v).toLocaleString('en-US');
+const g = document.getElementById('g'), svg = document.getElementById('map'), tip = document.getElementById('tip');
+const NS = 'http://www.w3.org/2000/svg';
+const maxReach = Math.max(1, ...Object.values(DATA).map(d => d[0]));
+const labels = [];
+PATHS.forEach(o => {
+  const p = document.createElementNS(NS, 'path');
+  p.setAttribute('d', o.p); p.setAttribute('class', 'prov');
+  const name = SHORT[o.n] || o.n, d = DATA[o.c] || [0, 0];
+  p.setAttribute('fill', d[0] > 0 ? (COLOURS[o.n] || '#9AA5B1') : '#E3E6EB');
+  p.addEventListener('mousemove', e => {
+    tip.innerHTML = `<b>${name}</b><br>Reach: ${fmt(d[0])}<br>Impressions: ${fmt(d[1])}`;
+    tip.style.display = 'block';
+    const r = document.getElementById('wrap').getBoundingClientRect();
+    let x = e.clientX - r.left + 14, y = e.clientY - r.top + 14;
+    if (x + tip.offsetWidth > r.width) x -= tip.offsetWidth + 28;
+    tip.style.left = x + 'px'; tip.style.top = y + 'px';
+  });
+  p.addEventListener('mouseleave', () => tip.style.display = 'none');
+  g.appendChild(p);
+  labels.push({p, name, reach: d[0]});
+});
+labels.forEach(({p, name, reach}) => {   // circles + names on top of all provinces
+  const b = p.getBBox(), cx = b.x + b.width / 2, cy = b.y + b.height / 2;
+  if (reach > 0) {
+    const c = document.createElementNS(NS, 'circle');
+    c.setAttribute('cx', cx); c.setAttribute('cy', cy);
+    c.setAttribute('r', 4 + Math.sqrt(reach / maxReach) * 34); c.setAttribute('class', 'dot');
+    g.appendChild(c);
+  }
+  if (reach > 0) {
+    const pin = document.createElementNS(NS, 'g');
+    pin.setAttribute('transform', `translate(${cx - 6},${cy - 17})`); pin.setAttribute('pointer-events', 'none');
+    pin.innerHTML = '<path d="M6 0C2.7 0 0 2.6 0 5.8 0 10 6 16 6 16s6-6 6-10.2C12 2.6 9.3 0 6 0z" fill="#D93025" stroke="#fff" stroke-width="1"/><circle cx="6" cy="5.8" r="2.2" fill="#fff"/>';
+    g.appendChild(pin);
+  }
+  const t = document.createElementNS(NS, 'text');
+  t.setAttribute('x', cx); t.setAttribute('y', cy + 11); t.setAttribute('class', 'lbl');
+  t.textContent = name; g.appendChild(t);
+});
+// zoom & pan
+let k = 1, tx = 0, ty = 0;
+const apply = () => g.setAttribute('transform', `translate(${tx},${ty}) scale(${k})`);
+const zoomAt = (f, cx = 327, cy = 300) => { const nk = Math.min(8, Math.max(1, k * f)); tx = cx - (cx - tx) * nk / k; ty = cy - (cy - ty) * nk / k; k = nk; if (k === 1) { tx = 0; ty = 0; } apply(); };
+document.getElementById('zin').onclick = () => zoomAt(1.4);
+document.getElementById('zout').onclick = () => zoomAt(1 / 1.4);
+document.getElementById('zre').onclick = () => { k = 1; tx = 0; ty = 0; apply(); };
+svg.addEventListener('wheel', e => { e.preventDefault(); const pt = svg.createSVGPoint(); pt.x = e.clientX; pt.y = e.clientY; const s = pt.matrixTransform(svg.getScreenCTM().inverse()); zoomAt(e.deltaY < 0 ? 1.2 : 1 / 1.2, s.x, s.y); }, {passive: false});
+let drag = null;
+svg.addEventListener('mousedown', e => drag = {x: e.clientX, y: e.clientY, tx, ty});
+window.addEventListener('mouseup', () => drag = null);
+window.addEventListener('mousemove', e => { if (!drag || k === 1) return; const sc = 655 / svg.clientWidth; tx = drag.tx + (e.clientX - drag.x) * sc; ty = drag.ty + (e.clientY - drag.y) * sc; apply(); });
+}
+Promise.all([import('https://cdn.jsdelivr.net/npm/@svg-maps/cambodia@2.0.0/index.js'), fetch('https://script.google.com/macros/s/AKfycbwSOcq85na_dQGnuQs3PSCTSyw_g7IrAx-gpqdlXMc8rBI9AFCyTYjkI84rGJ92pK8NzA/exec?format=json').then(r => r.json())]).then(([m, j]) => {
+  PATHS = m.default.locations.map(l => ({n: l.name, p: l.path, c: CODES[l.name]}));
+  document.getElementById('period').textContent = j.period;
+  main(j.data);
+}).catch(() => { document.getElementById('period').textContent = 'Data not available, please refresh'; main({}); });
+</script></body></html>
